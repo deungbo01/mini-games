@@ -4177,10 +4177,10 @@ body.skin-gold-deck .x-card:not(.back) {
     // --- PROCEDURAL BGM ENGINE (MILESTONE 1: 4-THEME ZERO-ASSET SYNTHESIZER) ---
     class ArcadeBGMEngine {
       constructor() {
-        this.storageKey = 'arcade_bgm_v1';
-        this.enabled = false;
+        this.storageKey = 'arcade_bgm_v2';
+        this.enabled = true;
         this.theme = 'auto'; // 'auto' | 'lofi' | 'synthwave' | 'chiptune' | 'jazz'
-        this.volume = 0.26;
+        this.volume = 0.55;
         this.currentTheme = 'lofi';
         this.timer = null;
         this.step = 0;
@@ -4357,12 +4357,11 @@ body.skin-gold-deck .x-card:not(.back) {
         this.initNodes();
         const ctx = this.getAudioContext();
         if (!ctx) return;
-        if (ctx.state === 'suspended') {
-          ctx.resume();
-        }
         const now = ctx.currentTime;
         this.masterGain.gain.cancelScheduledValues(now);
-        this.masterGain.gain.linearRampToValueAtTime(this.volume, now + 0.3);
+        this.masterGain.gain.setValueAtTime(this.volume, now);
+        this.duckGain.gain.cancelScheduledValues(now);
+        this.duckGain.gain.setValueAtTime(1.0, now);
 
         if (this.timer) clearInterval(this.timer);
         this.step = 0;
@@ -4370,6 +4369,13 @@ body.skin-gold-deck .x-card:not(.back) {
         
         const themeDef = this.themes[this.currentTheme] || this.themes.lofi;
         const intervalMs = (60 / themeDef.bpm / 4) * 1000;
+        if (ctx.state === 'suspended') {
+          ctx.resume().then(() => {
+            if (this.enabled) this.tick();
+          }).catch(() => {});
+        } else {
+          this.tick();
+        }
         this.timer = setInterval(() => this.tick(), intervalMs);
         this.updateUI();
       }
@@ -4380,7 +4386,7 @@ body.skin-gold-deck .x-card:not(.back) {
           if (ctx) {
             const now = ctx.currentTime;
             this.masterGain.gain.cancelScheduledValues(now);
-            this.masterGain.gain.linearRampToValueAtTime(0, now + 0.2);
+            this.masterGain.gain.setValueAtTime(0, now);
           }
         }
         if (this.timer) {
@@ -4393,14 +4399,18 @@ body.skin-gold-deck .x-card:not(.back) {
       restart() {
         this.stop();
         if (this.enabled) {
-          setTimeout(() => this.start(), 220);
+          setTimeout(() => this.start(), 80);
         }
       }
 
       tick() {
         if (!this.enabled) return;
         const ctx = this.getAudioContext();
-        if (!ctx || ctx.state === 'suspended') return;
+        if (!ctx) return;
+        if (ctx.state === 'suspended') {
+          ctx.resume().catch(() => {});
+          return;
+        }
 
         const themeDef = this.themes[this.currentTheme] || this.themes.lofi;
         const s = this.step % 16;
@@ -4415,15 +4425,15 @@ body.skin-gold-deck .x-card:not(.back) {
             const gain = ctx.createGain();
             const filter = ctx.createBiquadFilter();
 
-            osc.type = themeDef.wave === 'sawtooth' ? 'sawtooth' : 'sine';
+            osc.type = themeDef.wave === 'sawtooth' ? 'sawtooth' : 'triangle';
             osc.frequency.setValueAtTime(chord[i], now);
 
             filter.type = 'lowpass';
-            filter.frequency.setValueAtTime(this.currentTheme === 'synthwave' ? 650 : 850, now);
+            filter.frequency.setValueAtTime(this.currentTheme === 'synthwave' ? 1400 : 1600, now);
 
             const dur = (60 / themeDef.bpm) * 1.8;
-            gain.gain.setValueAtTime(0, now);
-            gain.gain.linearRampToValueAtTime(0.042, now + 0.08);
+            gain.gain.setValueAtTime(0.001, now);
+            gain.gain.linearRampToValueAtTime(0.09, now + 0.05);
             gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
 
             osc.connect(filter);
@@ -4443,13 +4453,13 @@ body.skin-gold-deck .x-card:not(.back) {
           const filter = ctx.createBiquadFilter();
 
           osc.type = themeDef.bassWave || 'triangle';
-          osc.frequency.setValueAtTime(bassFreq, now);
+          osc.frequency.setValueAtTime(bassFreq * 2, now);
 
           filter.type = 'lowpass';
-          filter.frequency.setValueAtTime(this.currentTheme === 'synthwave' ? 400 : 300, now);
+          filter.frequency.setValueAtTime(this.currentTheme === 'synthwave' ? 900 : 750, now);
 
           const dur = (60 / themeDef.bpm / 4) * 1.6;
-          gain.gain.setValueAtTime(0.08, now);
+          gain.gain.setValueAtTime(0.16, now);
           gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
 
           osc.connect(filter);
@@ -4468,8 +4478,8 @@ body.skin-gold-deck .x-card:not(.back) {
           osc.type = themeDef.wave;
           osc.frequency.setValueAtTime(melFreq, now);
 
-          const dur = (60 / themeDef.bpm / 4) * 1.2;
-          gain.gain.setValueAtTime(themeDef.wave === 'square' ? 0.025 : 0.038, now);
+          const dur = (60 / themeDef.bpm / 4) * 1.25;
+          gain.gain.setValueAtTime(themeDef.wave === 'square' ? 0.085 : 0.12, now);
           gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
 
           osc.connect(gain);
@@ -4484,20 +4494,20 @@ body.skin-gold-deck .x-card:not(.back) {
           const osc = ctx.createOscillator();
           const gain = ctx.createGain();
           osc.type = 'sine';
-          osc.frequency.setValueAtTime(110, now);
-          osc.frequency.exponentialRampToValueAtTime(35, now + 0.08);
+          osc.frequency.setValueAtTime(135, now);
+          osc.frequency.exponentialRampToValueAtTime(42, now + 0.09);
 
-          gain.gain.setValueAtTime(0.1, now);
-          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+          gain.gain.setValueAtTime(0.22, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
 
           osc.connect(gain);
           gain.connect(this.duckGain);
           osc.start(now);
-          osc.stop(now + 0.09);
+          osc.stop(now + 0.1);
         }
 
         if (themeDef.hatBeats && themeDef.hatBeats.includes(s)) {
-          const bufferSize = Math.floor(ctx.sampleRate * 0.035);
+          const bufferSize = Math.floor(ctx.sampleRate * 0.04);
           const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
           const data = buffer.getChannelData(0);
           for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
@@ -4507,11 +4517,11 @@ body.skin-gold-deck .x-card:not(.back) {
 
           const filter = ctx.createBiquadFilter();
           filter.type = 'highpass';
-          filter.frequency.setValueAtTime(7000, now);
+          filter.frequency.setValueAtTime(6000, now);
 
           const gain = ctx.createGain();
-          gain.gain.setValueAtTime(0.025, now);
-          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.035);
+          gain.gain.setValueAtTime(0.06, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
 
           noise.connect(filter);
           filter.connect(gain);
@@ -7564,16 +7574,19 @@ body.skin-gold-deck .x-card:not(.back) {
         });
         window.ArcadeBGM.updateUI();
 
-        // Resume audio context on first user click if BGM enabled
-        const unlockAudio = () => {
-          if (window.ArcadeBGM && window.ArcadeBGM.enabled && !window.ArcadeBGM.timer) {
-            window.ArcadeBGM.start();
+        // Resume audio context and start BGM on first user interaction
+        const unlockAudio = (e) => {
+          if (e && e.target && e.target.closest && e.target.closest('#btnBgm')) return;
+          if (window.ArcadeBGM && window.ArcadeBGM.enabled) {
+            const ctx = window.ArcadeBGM.getAudioContext();
+            if (ctx && ctx.state === 'suspended') ctx.resume().catch(() => {});
+            if (!window.ArcadeBGM.timer) {
+              window.ArcadeBGM.start();
+            }
           }
-          window.removeEventListener('click', unlockAudio);
-          window.removeEventListener('keydown', unlockAudio);
         };
-        window.addEventListener('click', unlockAudio);
-        window.addEventListener('keydown', unlockAudio);
+        window.addEventListener('pointerdown', unlockAudio, { passive: true });
+        window.addEventListener('keydown', unlockAudio, { passive: true });
       }
 
       // --- MILESTONES 2 & 3: SHARE CARD & LEADERBOARD LISTENERS ---
