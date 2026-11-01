@@ -4180,7 +4180,7 @@ body.skin-gold-deck .x-card:not(.back) {
         this.storageKey = 'arcade_bgm_v2';
         this.enabled = true;
         this.theme = 'auto'; // 'auto' | 'lofi' | 'synthwave' | 'chiptune' | 'jazz'
-        this.volume = 0.55;
+        this.volume = 0.72;
         this.currentTheme = 'lofi';
         this.timer = null;
         this.step = 0;
@@ -4433,7 +4433,7 @@ body.skin-gold-deck .x-card:not(.back) {
 
             const dur = (60 / themeDef.bpm) * 1.8;
             gain.gain.setValueAtTime(0.001, now);
-            gain.gain.linearRampToValueAtTime(0.09, now + 0.05);
+            gain.gain.linearRampToValueAtTime(0.22, now + 0.05);
             gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
 
             osc.connect(filter);
@@ -4459,7 +4459,7 @@ body.skin-gold-deck .x-card:not(.back) {
           filter.frequency.setValueAtTime(this.currentTheme === 'synthwave' ? 900 : 750, now);
 
           const dur = (60 / themeDef.bpm / 4) * 1.6;
-          gain.gain.setValueAtTime(0.16, now);
+          gain.gain.setValueAtTime(0.32, now);
           gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
 
           osc.connect(filter);
@@ -4479,7 +4479,7 @@ body.skin-gold-deck .x-card:not(.back) {
           osc.frequency.setValueAtTime(melFreq, now);
 
           const dur = (60 / themeDef.bpm / 4) * 1.25;
-          gain.gain.setValueAtTime(themeDef.wave === 'square' ? 0.085 : 0.12, now);
+          gain.gain.setValueAtTime(themeDef.wave === 'square' ? 0.20 : 0.26, now);
           gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
 
           osc.connect(gain);
@@ -4497,7 +4497,7 @@ body.skin-gold-deck .x-card:not(.back) {
           osc.frequency.setValueAtTime(135, now);
           osc.frequency.exponentialRampToValueAtTime(42, now + 0.09);
 
-          gain.gain.setValueAtTime(0.22, now);
+          gain.gain.setValueAtTime(0.36, now);
           gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
 
           osc.connect(gain);
@@ -4520,7 +4520,7 @@ body.skin-gold-deck .x-card:not(.back) {
           filter.frequency.setValueAtTime(6000, now);
 
           const gain = ctx.createGain();
-          gain.gain.setValueAtTime(0.06, now);
+          gain.gain.setValueAtTime(0.12, now);
           gain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
 
           noise.connect(filter);
@@ -4568,6 +4568,8 @@ body.skin-gold-deck .x-card:not(.back) {
 
     // --- MILESTONE 2: ARCADE SHAREABLE SCORECARD GENERATOR ---
     class ArcadeShareCardEngine {
+      init() {}
+
       constructor() {
         this.currentBlob = null;
         this.currentData = null;
@@ -6137,194 +6139,6 @@ body.skin-gold-deck .x-card:not(.back) {
       }
     }
 
-    // --- 9. ARCADE SHARE CARD ENGINE (STEP 5) ---
-    class ArcadeShareCardEngine {
-      constructor() {
-        this.canvas = null;
-        this.modal = null;
-        this.previewImg = null;
-        this.feedbackEl = null;
-      }
-
-      init() {
-        this.canvas = document.getElementById('shareCardCanvas');
-        this.modal = document.getElementById('modalShareCard');
-        this.previewImg = document.getElementById('shareCardPreview');
-        this.feedbackEl = document.getElementById('shareCardCopyFeedback');
-        this.bindEvents();
-      }
-
-      generate(gameKey = window.arcadeGame || 'mines', score = null) {
-        if (!this.canvas) return;
-        const ctx = this.canvas.getContext('2d');
-        const W = this.canvas.width;
-        const H = this.canvas.height;
-
-        const info = window.ExpansionMetadata ? Object.fromEntries(window.ExpansionMetadata.map(g => [g.key, g])) : {};
-        const gameTitle = info[gameKey]?.title || (gameKey === 'mines' ? '지뢰찾기' : gameKey === 'blocks' ? '블록블라스트' : gameKey === 'bricks' ? '스와이프 벽돌깨기' : gameKey === 'merge' ? '2048' : gameKey === 'snake' ? '스네이크' : gameKey === 'apple' ? '사과게임' : gameKey);
-        const icon = info[gameKey]?.icon || (gameKey === 'mines' ? '💣' : gameKey === 'blocks' ? '🧩' : gameKey === 'bricks' ? '🧱' : gameKey === 'merge' ? '🔢' : gameKey === 'snake' ? '🐍' : gameKey === 'apple' ? '🍎' : '🎮');
-
-        const best = window.ArcadeStorage?.read ? window.ArcadeStorage.read('arcade_best_' + gameKey) : 0;
-        const finalScore = score !== null ? score : (best || 100);
-
-        // 1. Background gradient
-        const grad = ctx.createLinearGradient(0, 0, W, H);
-        grad.addColorStop(0, '#090d16');
-        grad.addColorStop(0.5, '#0f172a');
-        grad.addColorStop(1, '#1e1b4b');
-        ctx.fillStyle = grad;
-        ctx.fillRect(0, 0, W, H);
-
-        // 2. Decorative Matrix Pattern
-        ctx.fillStyle = 'rgba(56, 189, 248, 0.05)';
-        for (let x = 30; x < W; x += 30) {
-          for (let y = 30; y < H; y += 30) {
-            ctx.beginPath();
-            ctx.arc(x, y, 1.5, 0, Math.PI * 2);
-            ctx.fill();
-          }
-        }
-
-        // 3. Card Outer Frame Border
-        ctx.strokeStyle = '#38bdf8';
-        ctx.lineWidth = 3;
-        ctx.strokeRect(16, 16, W - 32, H - 32);
-
-        ctx.strokeStyle = 'rgba(245, 158, 11, 0.6)';
-        ctx.lineWidth = 1;
-        ctx.strokeRect(22, 22, W - 44, H - 44);
-
-        // 4. Header Ribbon
-        ctx.fillStyle = '#1e293b';
-        ctx.fillRect(24, 24, W - 48, 54);
-        ctx.fillStyle = '#f59e0b';
-        ctx.font = 'bold 15px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText('★ ARCADE MINI GAMES 2.0 · OFFICIAL SCORE CERTIFICATE ★', W / 2, 57);
-
-        // 5. Game Icon Badge (Left)
-        ctx.fillStyle = 'rgba(56, 189, 248, 0.15)';
-        ctx.fillRect(55, 110, 110, 110);
-        ctx.strokeStyle = '#38bdf8';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(55, 110, 110, 110);
-        ctx.font = '55px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText(icon, 110, 188);
-
-        // 6. Game Title & Subtitle
-        ctx.textAlign = 'left';
-        ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 36px "Noto Sans KR", sans-serif';
-        ctx.fillText(gameTitle, 190, 150);
-
-        ctx.fillStyle = '#38bdf8';
-        ctx.font = 'bold 16px "Noto Sans KR", sans-serif';
-        ctx.fillText('CLASSIC MINI GAME RECORD', 190, 185);
-
-        // 7. Hero Score Box
-        ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
-        ctx.fillRect(55, 245, W - 110, 130);
-        ctx.strokeStyle = '#f59e0b';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(55, 245, W - 110, 130);
-
-        ctx.fillStyle = '#94a3b8';
-        ctx.font = 'bold 14px "Chakra Petch", monospace';
-        ctx.fillText('FINAL SCORE / RECORD', 80, 275);
-
-        ctx.fillStyle = '#fef08a';
-        ctx.font = 'bold 64px "Chakra Petch", monospace';
-        const scoreStr = typeof finalScore === 'number' ? finalScore.toLocaleString() : String(finalScore);
-        ctx.fillText(scoreStr, 80, 345);
-
-        // Rank Badge inside Score Box
-        ctx.fillStyle = '#f59e0b';
-        ctx.beginPath();
-        ctx.arc(W - 130, 310, 42, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = '#0f172a';
-        ctx.font = 'bold 28px "Chakra Petch", sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText('RANK', W - 130, 305);
-        ctx.font = 'bold 32px "Chakra Petch", sans-serif';
-        ctx.fillText('S', W - 130, 335);
-
-        // 8. Bottom Meta Tags
-        const achCount = window.ArcadeAchievements?.unlocked?.size || 0;
-        const d = new Date();
-        const dateStr = `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
-
-        ctx.textAlign = 'left';
-        ctx.fillStyle = '#cbd5e1';
-        ctx.font = '14px "Noto Sans KR", sans-serif';
-        ctx.fillText(`🏆 업적 달성: ${achCount} / 58`, 60, 420);
-        ctx.fillText(`📅 인증 일시: ${dateStr}`, 320, 420);
-        ctx.fillText(`⚡ 플레이 플랫폼: HTML5 WEB ARCADE`, 580, 420);
-
-        // 9. Footer
-        ctx.textAlign = 'center';
-        ctx.fillStyle = '#64748b';
-        ctx.font = '12px "Chakra Petch", monospace';
-        ctx.fillText('100% OFFLINE CAPABLE · BUILT FOR PURE GAMING FUN', W / 2, 475);
-
-        // Render preview
-        const dataUrl = this.canvas.toDataURL('image/png');
-        if (this.previewImg) this.previewImg.src = dataUrl;
-        if (this.modal) this.modal.classList.remove('hidden');
-        window.ArcadeAudio?.play('win');
-      }
-
-      bindEvents() {
-        const btnOpen = document.getElementById('btnShareCard');
-        const btnClose = document.getElementById('btnCloseShareCard');
-        const btnCopy = document.getElementById('btnCopyCardImage');
-        const btnDownload = document.getElementById('btnDownloadCardImage');
-
-        if (btnOpen) {
-          btnOpen.addEventListener('click', () => this.generate());
-        }
-        if (btnClose && this.modal) {
-          btnClose.addEventListener('click', () => this.modal.classList.add('hidden'));
-        }
-        if (this.modal) {
-          this.modal.addEventListener('click', (e) => {
-            if (e.target === this.modal) this.modal.classList.add('hidden');
-          });
-        }
-        if (btnCopy && this.canvas) {
-          btnCopy.addEventListener('click', async () => {
-            try {
-              this.canvas.toBlob(async (blob) => {
-                if (blob && navigator.clipboard && window.ClipboardItem) {
-                  await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
-                  if (this.feedbackEl) {
-                    this.feedbackEl.classList.remove('opacity-0');
-                    setTimeout(() => this.feedbackEl?.classList.add('opacity-0'), 2500);
-                  }
-                  window.ArcadeAudio?.play('click');
-                } else {
-                  alert('클립보드 이미지 복사가 지원되지 않는 브라우저입니다. 다운로드 버튼을 이용해 주세요!');
-                }
-              });
-            } catch (_) {
-              alert('이미지를 복사할 수 없습니다. 다운로드 버튼을 이용해 주세요!');
-            }
-          });
-        }
-        if (btnDownload && this.canvas) {
-          btnDownload.addEventListener('click', () => {
-            const dataUrl = this.canvas.toDataURL('image/png');
-            const a = document.createElement('a');
-            a.href = dataUrl;
-            a.download = `arcade-score-${window.arcadeGame || 'game'}-${new Date().toISOString().slice(0,10)}.png`;
-            a.click();
-            window.ArcadeAudio?.play('click');
-          });
-        }
-      }
-    }
-
     // --- 10. ARCADE SAVE DATA ENGINE (JSON BACKUP / RESTORE) (STEP 5) ---
     class ArcadeSaveDataEngine {
       constructor() {}
@@ -6394,11 +6208,9 @@ body.skin-gold-deck .x-card:not(.back) {
     window.ArcadeMobileController = arcadeMobileController;
 
     const arcadeDaily = new ArcadeDailyChallengeEngine();
-    const arcadeShareCard = new ArcadeShareCardEngine();
     const arcadeSaveData = new ArcadeSaveDataEngine();
 
     window.ArcadeDaily = arcadeDaily;
-    window.ArcadeShareCard = arcadeShareCard;
     window.ArcadeSaveData = arcadeSaveData;
 
     // Auto-init FX and Juice on DOM ready
@@ -7575,8 +7387,7 @@ body.skin-gold-deck .x-card:not(.back) {
         window.ArcadeBGM.updateUI();
 
         // Resume audio context and start BGM on first user interaction
-        const unlockAudio = (e) => {
-          if (e && e.target && e.target.closest && e.target.closest('#btnBgm')) return;
+        const unlockAudio = () => {
           if (window.ArcadeBGM && window.ArcadeBGM.enabled) {
             const ctx = window.ArcadeBGM.getAudioContext();
             if (ctx && ctx.state === 'suspended') ctx.resume().catch(() => {});
@@ -7585,8 +7396,9 @@ body.skin-gold-deck .x-card:not(.back) {
             }
           }
         };
-        window.addEventListener('pointerdown', unlockAudio, { passive: true });
-        window.addEventListener('keydown', unlockAudio, { passive: true });
+        ['click', 'pointerdown', 'touchend', 'keydown'].forEach(evt => {
+          window.addEventListener(evt, unlockAudio, { passive: true });
+        });
       }
 
       // --- MILESTONES 2 & 3: SHARE CARD & LEADERBOARD LISTENERS ---
